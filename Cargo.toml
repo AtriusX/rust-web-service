@@ -1,0 +1,23 @@
+[package]
+name = "web-service"
+version = "0.1.0"
+edition = "2024"
+description = "A simple rust web server to gain experience with the language and tools"
+
+[dependencies]
+async-trait = "0.1.89"
+axum = { version = "0.8.8", features = ["macros"] }
+chrono = "0.4.43"
+dotenv = "0.15.0"
+log = "0.4.29"
+serde = { version = "1.0", features = ["derive"] }
+sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", "chrono"] }
+tokio = { version = "1.49.0", features = ["rt-multi-thread"] }
+tower-http = { version = "0.6.8", features = ["trace"] }
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+
+[dev-dependencies]
+http-body-util = "0.1.3"
+serde_json = "1.0.149"
+mime = "0.3.17"
+tower = { version = "0.5.3", features = ["util"] }
