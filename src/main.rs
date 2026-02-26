@@ -1,11 +1,14 @@
 mod config;
-pub mod database;
-mod users;
 mod util;
+mod services;
+mod model;
+mod state;
+mod manager;
+mod repository;
+mod controller;
 
+use crate::state::AppState;
 use log::info;
-use sqlx::migrate;
-use std::io::Error;
 use tokio::net::TcpListener;
 
 #[tokio::main]
@@ -15,17 +18,12 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     config::get_tracing();
 
-    let pool = config::get_pool().await?;
-
-    info!("Running database migrations...");
-    migrate!("./migrations")
-        .run(&pool)
-        .await
-        .map_err(Error::other)?;
-    info!("Done!");
-
-    let routes = vec![users::get_routes()];
-    let app = config::app(&pool, routes);
+    let routes = vec![
+        controller::user_controller::get_routes(),
+        controller::auth_controller::get_routes(),
+    ];
+    let pool = AppState::get_pool().await?;
+    let app = config::app(pool, routes).await;
     let listener = TcpListener::bind("127.0.0.1:3000").await?;
     let addr = listener.local_addr()?;
 

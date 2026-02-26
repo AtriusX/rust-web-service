@@ -1,21 +1,13 @@
-use crate::config::AppState;
-use crate::database::ArcRepository;
-use crate::users::user::{User, UserDto};
+use crate::model::user::{User, UserDto};
+use crate::repository::repository_traits::ArcRepository;
 use crate::util::AsDtoEnabled;
-use axum::extract::FromRef;
 use axum::http::StatusCode;
 use log::{error, info};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize}; 
 
 #[derive(Clone)]
 pub struct UserManager {
     user_repository: ArcRepository<User, i32>,
-}
-
-impl FromRef<AppState> for UserManager {
-    fn from_ref(input: &AppState) -> Self {
-        input.users_api.user_manager.clone()
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
@@ -104,7 +96,7 @@ impl UserManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::database::{ReadRepository, Repository, WriteRepository};
+    use crate::repository::repository_traits::{ReadRepository, Repository, WriteRepository};
     use async_trait::async_trait;
     use chrono::NaiveDateTime;
     use std::sync::Arc;

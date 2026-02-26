@@ -1,5 +1,5 @@
-use crate::database::{ReadRepository, Repository, WriteRepository};
-use crate::users::user::User;
+use crate::model::user::User;
+use crate::repository::repository_traits::{ReadRepository, Repository, WriteRepository};
 use async_trait::async_trait;
 use sqlx::{query_as, PgPool};
 
@@ -105,7 +105,7 @@ impl Repository<User, i32> for UserRepository {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::database::TruncateRepository;
+    use crate::repository::repository_traits::TruncateRepository;
 
     #[async_trait]
     impl TruncateRepository for UserRepository {

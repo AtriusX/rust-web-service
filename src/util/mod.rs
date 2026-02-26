@@ -1,5 +1,6 @@
 use axum::http::StatusCode;
 use axum::Json;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 pub trait AsDtoEnabled<T> {
     fn as_dto(&self) -> T;
@@ -23,3 +24,11 @@ impl<T: Clone, E: Clone> ToJson<T, E> for Result<T, E> {
         }
     }
 }
+
+pub fn now_epoch() -> usize {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as usize
+}
+

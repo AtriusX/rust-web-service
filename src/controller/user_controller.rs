@@ -1,6 +1,6 @@
-use crate::config::AppState;
-use crate::users::user::UserDto;
-use crate::users::user_manager::{UserError, UserManager};
+use crate::manager::{UserError, UserManager};
+use crate::model::user::UserDto;
+use crate::state::AppState;
 use crate::util::ToJson;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -136,15 +136,15 @@ mod tests {
         }
     }
 
-    fn app(pool: &PgPool) -> Router {
+    async fn app(pool: PgPool) -> Router {
         let routes = vec![get_routes()];
 
-        config::app(pool, routes)
+        config::app(pool, routes).await
     }
 
     #[sqlx::test]
     async fn test_create_user(pool: PgPool) {
-        let app = app(&pool);
+        let app = app(pool).await;
         let user = user("foo");
         let res = create_user(&app, user).await;
 
@@ -158,7 +158,7 @@ mod tests {
 
     #[sqlx::test]
     async fn test_create_existing_user(pool: PgPool) {
-        let app = app(&pool);
+        let app = app(pool).await;
         let user = existing_user(1, "foo");
         let res = create_user(&app, user).await;
 
@@ -172,7 +172,7 @@ mod tests {
     #[sqlx::test]
     async fn test_get_user(pool: PgPool) {
         let user = user("foo");
-        let app = app(&pool);
+        let app = app(pool).await;
         let res = create_user(&app, user).await;
         let body = unwrap_ok(res).await;
         let res = get_user(&app, body["id"].as_i64().unwrap() as i32).await;
@@ -186,7 +186,7 @@ mod tests {
 
     #[sqlx::test]
     async fn test_get_missing_user(pool: PgPool) {
-        let app = app(&pool);
+        let app = app(pool).await;
         let test_user = 23423423;
 
         delete_user(&app, test_user).await;
@@ -206,7 +206,7 @@ mod tests {
             .iter()
             .map(|s| user(s))
             .collect();
-        let app = app(&pool);
+        let app = app(pool).await;
 
         for user in users {
             create_user(&app, user).await;
@@ -226,7 +226,7 @@ mod tests {
 
     #[sqlx::test]
     async fn test_update_user(pool: PgPool) {
-        let app = app(&pool);
+        let app = app(pool).await;
         let user = user("foo");
         let res = create_user(&app, user).await;
 
@@ -248,7 +248,7 @@ mod tests {
 
     #[sqlx::test]
     async fn test_update_missing_user(pool: PgPool) {
-        let app = app(&pool);
+        let app = app(pool).await;
         let user = user("foo");
         let res = update_user(&app, user).await;
 
@@ -261,7 +261,7 @@ mod tests {
 
     #[sqlx::test]
     async fn test_delete_user(pool: PgPool) {
-        let app = app(&pool);
+        let app = app(pool).await;
         let user = user("foo");
         let res = create_user(&app, user).await;
         let body = unwrap_ok(res).await;
@@ -276,7 +276,7 @@ mod tests {
 
     #[sqlx::test]
     async fn test_delete_missing_user(pool: PgPool) {
-        let app = app(&pool);
+        let app = app(pool).await;
         let test_user = 23423423;
 
         delete_user(&app, test_user).await;
