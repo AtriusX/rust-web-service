@@ -13,7 +13,7 @@ pub struct UsersApi {
 impl UsersApi {
     pub fn new(pool: &PgPool) -> Self {
         let user_repository = Arc::new(UserRepository::new(pool));
-        let user_manager = UserManager::new(user_repository);
+        let user_manager = UserManager::new(user_repository.clone());
 
         Self {
             user_manager

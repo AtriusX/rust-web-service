@@ -24,7 +24,7 @@ async fn main() -> std::io::Result<()> {
     ];
     let pool = AppState::get_pool().await?;
     let app = config::app(pool, routes).await;
-    let listener = TcpListener::bind("127.0.0.1:3000").await?;
+    let listener = TcpListener::bind("0.0.0.0:3000").await?;
     let addr = listener.local_addr()?;
 
     info!("Serving app on {addr}");
