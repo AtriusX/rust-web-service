@@ -3,7 +3,7 @@ use crate::repository::repository_traits::ArcRepository;
 use crate::util::AsDtoEnabled;
 use axum::http::StatusCode;
 use log::{error, info};
-use serde::{Deserialize, Serialize}; 
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
 pub struct UserManager {

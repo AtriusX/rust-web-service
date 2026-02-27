@@ -1,6 +1,6 @@
-use crate::manager::{UserError, UserManager};
+use crate::manager::UserError;
 use crate::model::user::UserDto;
-use crate::state::AppState;
+use crate::state::{AppState, UsersApi};
 use crate::util::ToJson;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -17,44 +17,46 @@ pub fn get_routes() -> Router<AppState> {
 }
 
 async fn create_user(
-    State(manager): State<UserManager>,
+    State(UsersApi { user_manager, .. }): State<UsersApi>,
     Json(payload): Json<UserDto>,
 ) -> (StatusCode, Json<Result<UserDto, UserError>>) {
-    manager
+    user_manager
         .create_user(&payload)
         .await
         .to_json(StatusCode::CREATED, StatusCode::BAD_REQUEST)
 }
 
 async fn update_user(
-    State(manager): State<UserManager>,
+    State(UsersApi { user_manager, .. }): State<UsersApi>,
     Json(payload): Json<UserDto>,
 ) -> (StatusCode, Json<Result<UserDto, UserError>>) {
-    manager
+    user_manager
         .update_user(&payload)
         .await
         .to_json_ok(StatusCode::BAD_REQUEST)
 }
 
 async fn get_user(
-    State(manager): State<UserManager>,
+    State(UsersApi { user_manager, .. }): State<UsersApi>,
     Path(id): Path<i32>,
 ) -> (StatusCode, Json<Result<UserDto, UserError>>) {
-    manager
+    user_manager
         .get_user(&id)
         .await
         .to_json_ok(StatusCode::NOT_FOUND)
 }
 
-async fn get_users(State(manager): State<UserManager>) -> (StatusCode, Json<Vec<UserDto>>) {
-    (StatusCode::OK, Json(manager.get_users().await))
+async fn get_users(
+    State(UsersApi { user_manager, .. }): State<UsersApi>,
+) -> (StatusCode, Json<Vec<UserDto>>) {
+    (StatusCode::OK, Json(user_manager.get_users().await))
 }
 
 async fn delete_user(
-    State(manager): State<UserManager>,
+    State(UsersApi { user_manager, .. }): State<UsersApi>,
     Path(id): Path<i32>,
 ) -> (StatusCode, Json<()>) {
-    (manager.delete_user(&id).await, Json(()))
+    (user_manager.delete_user(&id).await, Json(()))
 }
 
 #[cfg(test)]

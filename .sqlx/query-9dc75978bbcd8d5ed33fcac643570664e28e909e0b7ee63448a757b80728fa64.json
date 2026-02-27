@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            insert into user_account (user_name)\n            values ($1)\n            returning id, user_name, created_timestamp, updated_timestamp\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_timestamp",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 3,
+        "name": "updated_timestamp",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9dc75978bbcd8d5ed33fcac643570664e28e909e0b7ee63448a757b80728fa64"
+}

@@ -1,15 +1,15 @@
 mod users_api;
 
 use crate::services::AuthService;
-use crate::state::users_api::UsersApi;
+pub(crate) use crate::state::users_api::UsersApi;
+use axum::extract::FromRef;
 use log::info;
 use sqlx::postgres::PgPoolOptions;
 use sqlx::{migrate, PgPool};
 use std::env;
 use std::io::{Error, ErrorKind};
-use axum::extract::FromRef;
 
-#[derive(Clone)]
+#[derive(Clone, FromRef)]
 pub struct AppState {
     pub users_api: UsersApi,
     pub auth_service: AuthService,
@@ -42,11 +42,5 @@ impl AppState {
             .connect(&db_url)
             .await
             .map_err(Error::other)
-    }
-}
-
-impl FromRef<AppState> for AuthService {
-    fn from_ref(input: &AppState) -> Self {
-        input.auth_service.clone()
     }
 }
