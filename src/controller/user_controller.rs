@@ -139,7 +139,7 @@ mod tests {
     async fn app(pool: PgPool) -> Router {
         let routes = vec![get_routes()];
 
-        config::app(pool, routes).await
+        config::app(pool, vec![], routes).await
     }
 
     #[sqlx::test]

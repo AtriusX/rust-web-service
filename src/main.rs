@@ -6,6 +6,7 @@ mod state;
 mod manager;
 mod repository;
 mod controller;
+mod middleware;
 
 use crate::state::AppState;
 use log::info;
@@ -20,10 +21,13 @@ async fn main() -> std::io::Result<()> {
 
     let routes = vec![
         controller::user_controller::get_routes(),
+        controller::auth_controller::get_protected_routes(),
+    ];
+    let public_routes = vec![
         controller::auth_controller::get_routes(),
     ];
     let pool = AppState::get_pool().await?;
-    let app = config::app(pool, routes).await;
+    let app = config::app(pool, routes, public_routes).await;
     let listener = TcpListener::bind("0.0.0.0:3000").await?;
     let addr = listener.local_addr()?;
 

@@ -5,12 +5,16 @@ use crate::state::AppState;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::{get, post};
-use axum::{Json, Router};
+use axum::{Extension, Json, Router};
 use serde::{Deserialize, Serialize};
 
 pub fn get_routes() -> Router<AppState> {
     Router::new()
         .route("/login", post(login))
+}
+
+pub fn get_protected_routes() -> Router<AppState> {
+    Router::new()
         .route("/get-user-info", get(get_info))
 }
 
@@ -41,10 +45,12 @@ pub struct GetUserInfo {
     pub info: String,
 }
 
-async fn get_info(_claims: JwtClaims) -> (StatusCode, Json<Result<GetUserInfo, AuthError>>) {
+async fn get_info(
+    Extension(claims): Extension<JwtClaims>,
+) -> (StatusCode, Json<Result<GetUserInfo, AuthError>>) {
     (StatusCode::OK, Json(Ok(
         GetUserInfo {
-            username: "foo".to_string(),
+            username: claims.sub,
             email: "foo@foo.com".to_string(),
             info: "Hello there!".to_string(),
         }

@@ -2,13 +2,7 @@ use crate::config::authentication::KEYS;
 use crate::model::auth::JwtClaims;
 use crate::model::auth_error::AuthError;
 use crate::util;
-use axum::extract::FromRequestParts;
-use axum::http::request::Parts;
-use axum::RequestPartsExt;
-use axum_extra::headers::authorization::Bearer;
-use axum_extra::headers::Authorization;
-use axum_extra::TypedHeader;
-use jsonwebtoken::{decode, encode, Header, Validation};
+use jsonwebtoken::{encode, Header};
 use serde::Serialize;
 
 #[derive(Clone, Default)]
@@ -46,23 +40,5 @@ impl AuthService {
             .map_err(|_| AuthError::TokenCreation)?;
 
         Ok(AuthBody::new(access_token))
-    }
-}
-
-impl<S> FromRequestParts<S> for JwtClaims
-where
-    S: Send + Sync,
-{
-    type Rejection = AuthError;
-
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
-        let TypedHeader(Authorization(bearer)) = parts
-            .extract::<TypedHeader<Authorization<Bearer>>>()
-            .await
-            .map_err(|_| AuthError::InvalidToken)?;
-        let token_data = decode::<JwtClaims>(bearer.token(), &KEYS.decoding, &Validation::default())
-            .map_err(|_| AuthError::InvalidToken)?;
-
-        Ok(token_data.claims)
     }
 }
