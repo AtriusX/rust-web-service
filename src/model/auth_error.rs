@@ -1,44 +1,41 @@
-use crate::model::api_response::ResponseError;
+use crate::model::api_response::{ApiError, AsApiError, ResponseError};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use thiserror::Error;
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Error)]
 pub enum AuthError {
+    #[error("Wrong credentials provided!")]
     WrongCredentials,
+    #[error("Credentials not provided!")]
     MissingCredentials,
+    #[error("Error occurred in login token creation.")]
     TokenCreation,
+    #[error("Invalid session token, please log back in.")]
     InvalidToken,
 }
 
 impl ResponseError for AuthError {
-    fn to_status_code(&self) -> StatusCode {
+
+    fn to_api_err_response(&self) -> (StatusCode, ApiError) {
         match self {
-            AuthError::WrongCredentials
-            | AuthError::MissingCredentials => StatusCode::BAD_REQUEST,
-            AuthError::InvalidToken => StatusCode::UNAUTHORIZED,
-            AuthError::TokenCreation => StatusCode::INTERNAL_SERVER_ERROR
+            AuthError::WrongCredentials =>
+                self.as_api_error(StatusCode::BAD_REQUEST, "WrongCredentials"),
+            AuthError::MissingCredentials =>
+                self.as_api_error(StatusCode::BAD_REQUEST, "MissingCredentials"),
+            AuthError::InvalidToken =>
+                self.as_api_error(StatusCode::UNAUTHORIZED, "InvalidToken"),
+            AuthError::TokenCreation =>
+                self.as_api_error(StatusCode::UNAUTHORIZED, "InvalidToken"),
         }
     }
 }
 
 impl IntoResponse for AuthError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AuthError::WrongCredentials => (StatusCode::UNAUTHORIZED, "Wrong credentials"),
-            AuthError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
-            AuthError::MissingCredentials => (StatusCode::UNAUTHORIZED, "Missing credentials"),
-            AuthError::TokenCreation => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Token creation failed")
-            }
-        };
-        let body = Json(json!({
-            "error": error_message,
-        }));
 
-        (status, body).into_response()
+    fn into_response(self) -> Response {
+        self.to_api_err_response().into_response()
     }
 }

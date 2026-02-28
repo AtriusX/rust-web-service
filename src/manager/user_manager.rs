@@ -1,10 +1,11 @@
-use crate::model::api_response::ResponseError;
+use crate::model::api_response::{ApiError, AsApiError, ResponseError};
 use crate::model::user::{User, UserDto};
 use crate::repository::repository_traits::ArcRepository;
 use crate::util::AsDtoEnabled;
 use axum::http::StatusCode;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use utoipa::ToSchema;
 
 #[derive(Clone)]
@@ -12,21 +13,33 @@ pub struct UserManager {
     user_repository: ArcRepository<User, i32>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize, ToSchema, Error)]
 pub enum UserError {
-    CannotCreateExistingUser,
+
+    #[error("Unable to create user with ID {0}, user already exists")]
+    CannotCreateExistingUser(i32),
+
+    #[error("No user ID provided by request")]
     MissingId,
-    NotFound,
+
+    #[error("User ID {0} does not exist")]
+    NotFound(i32),
+
+    #[error("User request failed: {0}")]
     FailedRequest(String),
 }
 
 impl ResponseError for UserError {
-    fn to_status_code(&self) -> StatusCode {
+    fn to_api_err_response(&self) -> (StatusCode, ApiError) {
         match &self {
-            UserError::CannotCreateExistingUser => StatusCode::CONFLICT,
-            UserError::MissingId => StatusCode::BAD_REQUEST,
-            UserError::NotFound => StatusCode::NOT_FOUND,
-            UserError::FailedRequest(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            UserError::CannotCreateExistingUser(_) =>
+                self.as_api_error(StatusCode::BAD_REQUEST, "CannotCreateExistingUser"),
+            UserError::MissingId =>
+                self.as_api_error(StatusCode::BAD_REQUEST, "MissingId"),
+            UserError::NotFound(_) =>
+                self.as_api_error(StatusCode::NOT_FOUND, "NotFound"),
+            UserError::FailedRequest(_) =>
+                self.as_api_error(StatusCode::INTERNAL_SERVER_ERROR, "FailedRequest"),
         }
     }
 }
@@ -39,7 +52,7 @@ impl UserManager {
     pub async fn create_user(&self, payload: &UserDto) -> Result<UserDto, UserError> {
         if let Some(v) = payload.id {
             error!("Unable to create new user with existing id {v}");
-            return Err(UserError::CannotCreateExistingUser);
+            return Err(UserError::CannotCreateExistingUser(v));
         }
 
         info!(
@@ -83,7 +96,7 @@ impl UserManager {
             .find_by_id(id)
             .await
             .map(|u| u.as_dto())
-            .ok_or(UserError::NotFound)
+            .ok_or_else(|| UserError::NotFound(*id))
     }
 
     pub async fn get_users(&self) -> Vec<UserDto> {
@@ -187,7 +200,7 @@ mod tests {
         let res = manager.create_user(&user).await;
 
         assert!(res.is_err());
-        assert_eq!(res.err(), Some(UserError::CannotCreateExistingUser))
+        assert_eq!(res.err(), Some(UserError::CannotCreateExistingUser(1)))
     }
 
     #[tokio::test]
@@ -205,7 +218,7 @@ mod tests {
         let res = manager.get_user(&123).await;
 
         assert!(res.is_err());
-        assert_eq!(res.err(), Some(UserError::NotFound));
+        assert_eq!(res.err(), Some(UserError::NotFound(123)));
     }
 
     #[tokio::test]

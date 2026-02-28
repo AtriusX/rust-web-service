@@ -1,5 +1,4 @@
-use crate::manager::UserError;
-use crate::model::api_response::{ApiResponse, AsApiResponse};
+use crate::model::api_response::{ApiError, ApiResponse, AsApiResponse};
 use crate::model::auth_error::AuthError;
 use crate::model::user::UserDto;
 use crate::state::{AppState, UsersApi};
@@ -25,17 +24,15 @@ pub fn get_routes() -> OpenApiRouter<AppState> {
     path = "/user",
     request_body = UserDto,
     responses(
-        (status = 200, description = "New user created", body = UserDto),
-        (status = 401, description = "Not authorized", body = AuthError),
-        (status = 409, description = "User already exists", body = UserError),
-        (status = 500, description = "Failed to save user", body = UserError),
+        (status = 201, description = "Create new user", body = UserDto),
+        (status = "default", body = AuthError),
     ),
     tag = USER_TAG,
 )]
 async fn create_user(
     State(UsersApi { user_manager, .. }): State<UsersApi>,
     Json(payload): Json<UserDto>,
-) -> ApiResponse<UserDto, UserError> {
+) -> ApiResponse<UserDto> {
     user_manager
         .create_user(&payload)
         .await
@@ -47,17 +44,15 @@ async fn create_user(
     path = "/user",
     request_body = UserDto,
     responses(
-        (status = 200, description = "User updated", body = UserDto),
-        (status = 401, description = "Not authorized", body = AuthError),
-        (status = 400, description = "Missing request info", body = UserError),
-        (status = 500, description = "Failed to find or update user", body = UserError),
+        (status = OK, description = "Update existing user", body = UserDto),
+        (status = "default", description = "General API Error", body = ApiError),
     ),
     tag = USER_TAG,
 )]
 async fn update_user(
     State(UsersApi { user_manager, .. }): State<UsersApi>,
     Json(payload): Json<UserDto>,
-) -> ApiResponse<UserDto, UserError> {
+) -> ApiResponse<UserDto> {
     user_manager
         .update_user(&payload)
         .await
@@ -68,9 +63,8 @@ async fn update_user(
     get,
     path = "/user/{id}",
     responses(
-        (status = 200, description = "User found", body = UserDto),
-        (status = 401, description = "Not authorized", body = AuthError),
-        (status = 404, description = "User not found", body = UserError),
+        (status = OK, description = "Find user by user ID", body = UserDto),
+        (status = "default", description = "General API Error", body = ApiError),
     ),
     params(
         ("id" = i32, Path, description = "User ID")
@@ -80,7 +74,7 @@ async fn update_user(
 async fn get_user(
     State(UsersApi { user_manager, .. }): State<UsersApi>,
     Path(id): Path<i32>,
-) -> ApiResponse<UserDto, UserError> {
+) -> ApiResponse<UserDto> {
     user_manager
         .get_user(&id)
         .await
@@ -91,8 +85,8 @@ async fn get_user(
     get,
     path = "/users",
     responses(
-        (status = 200, description = "Users found", body = Vec<UserDto>),
-        (status = 401, description = "Not authorized", body = AuthError),
+        (status = CREATED, description = "Retrieve all users", body = Vec<UserDto>),
+        (status = "default", description = "General API Error", body = ApiError),
     ),
     tag = USER_TAG,
 )]
@@ -106,8 +100,8 @@ async fn get_users(
     delete,
     path = "/user/{id}",
     responses(
-        (status = 200, description = "Users found", body = Vec<UserDto>),
-        (status = 401, description = "Not authorized", body = AuthError),
+        (status = OK, description = "Delete a user by user ID", body = Vec<UserDto>),
+        (status = "default", description = "General API Error", body = ApiError),
     ),
     params(
         ("id" = i32, Path, description = "User ID")
@@ -230,7 +224,7 @@ mod tests {
 
         let body = unwrap_err(res).await;
 
-        assert_eq!(body, "CannotCreateExistingUser");
+        assert_eq!(body["code"], "CannotCreateExistingUser");
     }
 
     #[sqlx::test]
@@ -261,7 +255,7 @@ mod tests {
 
         let body = unwrap_err(res).await;
 
-        assert_eq!(body, "NotFound");
+        assert_eq!(body["code"], "NotFound");
     }
 
     #[sqlx::test]
@@ -320,7 +314,7 @@ mod tests {
 
         let body = unwrap_err(res).await;
 
-        assert_eq!(body, "MissingId");
+        assert_eq!(body["code"], "MissingId");
     }
 
     #[sqlx::test]

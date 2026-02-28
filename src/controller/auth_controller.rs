@@ -1,4 +1,4 @@
-use crate::model::api_response::{ApiResponse, AsApiResponse};
+use crate::model::api_response::{ApiError, ApiResponse, AsApiResponse};
 use crate::model::auth::{JwtClaims, LoginDto};
 use crate::model::auth_error::AuthError;
 use crate::services::{AuthBody, AuthService};
@@ -26,9 +26,8 @@ pub fn get_protected_routes() -> OpenApiRouter<AppState> {
     post,
     path = "/login",
     responses(
-        (status = 200, body = AuthBody),
-        (status = 400, body = AuthError),
-        (status = 500, body = AuthError),
+        (status = OK, description = "Log in the specified user", body = AuthBody),
+        (status = "default", description = "General API Error", body = ApiError),
     ),
     tag = AUTH_TAG,
     security(),
@@ -36,7 +35,7 @@ pub fn get_protected_routes() -> OpenApiRouter<AppState> {
 async fn login(
     State(state): State<AuthService>,
     Json(payload): Json<LoginDto>,
-) -> ApiResponse<AuthBody, AuthError> {
+) -> ApiResponse<AuthBody> {
     if payload.user_name.is_empty() || payload.password.is_empty() {
         return Err(AuthError::MissingCredentials).as_api_response_ok();
     }
@@ -58,22 +57,24 @@ pub struct GetUserInfo {
 }
 
 #[utoipa::path(
-    post,
+    get,
     path = "/get-user-info",
     responses(
-        (status = 200, body = GetUserInfo),
-        (status = 401, body = AuthError),
+        (status = OK, description = "Retrieve user info", body = GetUserInfo),
+        (status = "default", description = "General API Error", body = ApiError),
     ),
     tag = AUTH_TAG,
 )]
 async fn get_info(
     Extension(claims): Extension<JwtClaims>,
-) -> ApiResponse<GetUserInfo, AuthError> {
-    Ok(
+) -> ApiResponse<GetUserInfo> {
+    let res = Ok::<_, AuthError>(
         GetUserInfo {
             username: claims.sub,
             email: "foo@foo.com".to_string(),
             info: "Hello there!".to_string(),
         }
-    ).as_api_response_ok()
+    );
+
+    res.as_api_response_ok()
 }

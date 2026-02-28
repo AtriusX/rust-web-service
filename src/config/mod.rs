@@ -39,6 +39,20 @@ fn get_cors() -> CorsLayer {
         )
 }
 
+fn get_swagger(
+    protected_api: utoipa::openapi::OpenApi,
+    public_api: utoipa::openapi::OpenApi,
+) -> SwaggerUi {
+    let api = OpenApiSpec::openapi()
+        .merge_from(protected_api)
+        .merge_from(public_api);
+    let swagger = SwaggerUi::new("/swagger-ui")
+        .url("/api.json", api)
+        .config(utoipa_swagger_ui::Config::default().persist_authorization(true));
+
+    swagger
+}
+
 pub async fn app(
     pool: PgPool,
     protected_routers: Vec<OpenApiRouter<AppState>>,
@@ -53,11 +67,7 @@ pub async fn app(
         .into_iter()
         .fold(OpenApiRouter::new(), OpenApiRouter::merge)
         .split_for_parts();
-    let api = OpenApiSpec::openapi()
-        .merge_from(protected_api)
-        .merge_from(public_api);
-    let swagger = SwaggerUi::new("/swagger-ui")
-        .url("/api.json", api);
+    let swagger = get_swagger(protected_api, public_api);
     let state = AppState::new(pool).await;
     let cors = get_cors();
 
