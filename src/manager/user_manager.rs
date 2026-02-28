@@ -1,21 +1,34 @@
+use crate::model::api_response::ResponseError;
 use crate::model::user::{User, UserDto};
 use crate::repository::repository_traits::ArcRepository;
 use crate::util::AsDtoEnabled;
 use axum::http::StatusCode;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(Clone)]
 pub struct UserManager {
     user_repository: ArcRepository<User, i32>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize, ToSchema)]
 pub enum UserError {
     CannotCreateExistingUser,
     MissingId,
     NotFound,
     FailedRequest(String),
+}
+
+impl ResponseError for UserError {
+    fn to_status_code(&self) -> StatusCode {
+        match &self {
+            UserError::CannotCreateExistingUser => StatusCode::CONFLICT,
+            UserError::MissingId => StatusCode::BAD_REQUEST,
+            UserError::NotFound => StatusCode::NOT_FOUND,
+            UserError::FailedRequest(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
 }
 
 impl UserManager {

@@ -4,11 +4,12 @@ use crate::model::auth_error::AuthError;
 use crate::util;
 use jsonwebtoken::{encode, Header};
 use serde::Serialize;
+use utoipa::ToSchema;
 
 #[derive(Clone, Default)]
 pub struct AuthService;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct AuthBody {
     pub access_token: String,
     pub token_type: String,

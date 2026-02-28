@@ -1,6 +1,7 @@
 use crate::util::AsDtoEnabled;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
+use utoipa::ToSchema;
 
 #[derive(Clone, FromRow)]
 #[allow(dead_code)]
@@ -32,7 +33,8 @@ impl User {
         }
     }
 }
-#[derive(Clone, Deserialize, Serialize)]
+
+#[derive(Clone, Deserialize, Serialize, ToSchema)]
 pub struct UserDto {
     pub id: Option<i32>,
     pub user_name: Option<String>,

@@ -1,57 +1,119 @@
 use crate::manager::UserError;
+use crate::model::api_response::{ApiResponse, AsApiResponse};
+use crate::model::auth_error::AuthError;
 use crate::model::user::UserDto;
 use crate::state::{AppState, UsersApi};
-use crate::util::ToJson;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::{delete, get, post, put};
-use axum::{Json, Router};
+use axum::Json;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
-pub fn get_routes() -> Router<AppState> {
-    Router::new()
-        .route("/user", post(create_user))
-        .route("/user", put(update_user))
-        .route("/users", get(get_users))
-        .route("/user/{id}", get(get_user))
-        .route("/user/{id}", delete(delete_user))
+const USER_TAG: &str = "User";
+
+pub fn get_routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
+        .routes(routes!(create_user))
+        .routes(routes!(get_user))
+        .routes(routes!(update_user))
+        .routes(routes!(delete_user))
+        .routes(routes!(get_users))
 }
 
+#[utoipa::path(
+    post,
+    path = "/user",
+    request_body = UserDto,
+    responses(
+        (status = 200, description = "New user created", body = UserDto),
+        (status = 401, description = "Not authorized", body = AuthError),
+        (status = 409, description = "User already exists", body = UserError),
+        (status = 500, description = "Failed to save user", body = UserError),
+    ),
+    tag = USER_TAG,
+)]
 async fn create_user(
     State(UsersApi { user_manager, .. }): State<UsersApi>,
     Json(payload): Json<UserDto>,
-) -> (StatusCode, Json<Result<UserDto, UserError>>) {
+) -> ApiResponse<UserDto, UserError> {
     user_manager
         .create_user(&payload)
         .await
-        .to_json(StatusCode::CREATED, StatusCode::BAD_REQUEST)
+        .as_api_response(StatusCode::CREATED)
 }
 
+#[utoipa::path(
+    put,
+    path = "/user",
+    request_body = UserDto,
+    responses(
+        (status = 200, description = "User updated", body = UserDto),
+        (status = 401, description = "Not authorized", body = AuthError),
+        (status = 400, description = "Missing request info", body = UserError),
+        (status = 500, description = "Failed to find or update user", body = UserError),
+    ),
+    tag = USER_TAG,
+)]
 async fn update_user(
     State(UsersApi { user_manager, .. }): State<UsersApi>,
     Json(payload): Json<UserDto>,
-) -> (StatusCode, Json<Result<UserDto, UserError>>) {
+) -> ApiResponse<UserDto, UserError> {
     user_manager
         .update_user(&payload)
         .await
-        .to_json_ok(StatusCode::BAD_REQUEST)
+        .as_api_response_ok()
 }
 
+#[utoipa::path(
+    get,
+    path = "/user/{id}",
+    responses(
+        (status = 200, description = "User found", body = UserDto),
+        (status = 401, description = "Not authorized", body = AuthError),
+        (status = 404, description = "User not found", body = UserError),
+    ),
+    params(
+        ("id" = i32, Path, description = "User ID")
+    ),
+    tag = USER_TAG,
+)]
 async fn get_user(
     State(UsersApi { user_manager, .. }): State<UsersApi>,
     Path(id): Path<i32>,
-) -> (StatusCode, Json<Result<UserDto, UserError>>) {
+) -> ApiResponse<UserDto, UserError> {
     user_manager
         .get_user(&id)
         .await
-        .to_json_ok(StatusCode::NOT_FOUND)
+        .as_api_response_ok()
 }
 
+#[utoipa::path(
+    get,
+    path = "/users",
+    responses(
+        (status = 200, description = "Users found", body = Vec<UserDto>),
+        (status = 401, description = "Not authorized", body = AuthError),
+    ),
+    tag = USER_TAG,
+)]
 async fn get_users(
     State(UsersApi { user_manager, .. }): State<UsersApi>,
 ) -> (StatusCode, Json<Vec<UserDto>>) {
     (StatusCode::OK, Json(user_manager.get_users().await))
 }
 
+#[utoipa::path(
+    delete,
+    path = "/user/{id}",
+    responses(
+        (status = 200, description = "Users found", body = Vec<UserDto>),
+        (status = 401, description = "Not authorized", body = AuthError),
+    ),
+    params(
+        ("id" = i32, Path, description = "User ID")
+    ),
+    tag = USER_TAG,
+)]
 async fn delete_user(
     State(UsersApi { user_manager, .. }): State<UsersApi>,
     Path(id): Path<i32>,
@@ -116,12 +178,12 @@ mod tests {
 
     #[inline]
     async fn unwrap_ok(res: axum::response::Response) -> Value {
-        unwrap_res(res).await["Ok"].clone()
+        unwrap_res(res).await.clone()
     }
 
     #[inline]
     async fn unwrap_err(res: axum::response::Response) -> Value {
-        unwrap_res(res).await["Err"].clone()
+        unwrap_res(res).await.clone()
     }
 
     fn user(user_name: &str) -> UserDto {
