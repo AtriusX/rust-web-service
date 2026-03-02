@@ -7,9 +7,9 @@ description = "A simple rust web server to gain experience with the language and
 [dependencies]
 async-trait = "0.1.89"
 axum = { version = "0.8.8", features = ["macros"] }
-axum-extra = { version = "0.12.5", features = ["typed-header"] }
+axum-extra = { version = "0.12.5", features = ["typed-header", "cookie"] }
 chrono = "0.4.43"
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 jsonwebtoken = { version = "10", features = ["aws_lc_rs"] }
 log = "0.4.29"
 serde = { version = "1.0", features = ["derive"] }
@@ -18,10 +18,15 @@ sqlx = { version = "0.8.6", features = ["runtime-tokio-native-tls", "postgres", 
 tokio = { version = "1.49.0", features = ["full"] }
 tower-http = { version = "0.6.8", features = ["trace", "cors"] }
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
-utoipa = { version = "5.4.0", features = ["axum_extras"] }
+utoipa = { version = "5.4.0", features = ["axum_extras", "uuid"] }
 utoipa-axum = "0.2.0"
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
 thiserror = "2.0.18"
+redis = { version = "1.0.4", features = ["tokio-comp", "bb8", "uuid"] }
+deadpool = { version = "0.13.0", features = ["serde"] }
+deadpool-redis = { version = "0.23.0", features = ["serde", "uuid"] }
+uuid = { version = "1.21.0", features = ["fast-rng", "macro-diagnostics", "v4", "serde"] }
+sha2 = "0.10.9"
 
 [dev-dependencies]
 http-body-util = "0.1.3"

@@ -10,6 +10,12 @@ setup-network:
 	${DOCKER} network remove app
 	${DOCKER} network create app --driver bridge
 
+deploy-redis:
+	${DOCKER} run -d --name redis \
+		--network app \
+		-p 6379:6379 \
+		redis:latest
+
 deploy-db:
 	${DOCKER} run -d --name postgres \
 		--network app \

@@ -1,5 +1,4 @@
 use crate::model::api_response::{ApiError, ApiResponse, AsApiResponse};
-use crate::model::auth_error::AuthError;
 use crate::model::user::UserDto;
 use crate::state::{AppState, UsersApi};
 use axum::extract::{Path, State};
@@ -25,7 +24,7 @@ pub fn get_routes() -> OpenApiRouter<AppState> {
     request_body = UserDto,
     responses(
         (status = 201, description = "Create new user", body = UserDto),
-        (status = "default", body = AuthError),
+        (status = "default", body = ApiError),
     ),
     tag = USER_TAG,
 )]
@@ -119,6 +118,7 @@ async fn delete_user(
 mod tests {
     use super::*;
     use crate::config;
+    use crate::config::storage_config::StorageConfig;
     use axum::body::Body;
     use axum::http::header::CONTENT_TYPE;
     use axum::http::Request;
@@ -196,8 +196,12 @@ mod tests {
 
     async fn app(pool: PgPool) -> Router {
         let routes = vec![get_routes()];
+        let state = AppState::new(
+            &pool,
+            StorageConfig::get_redis_pool().await.unwrap(),
+        ).await;
 
-        config::app(pool, vec![], routes).await
+        config::app(state, vec![], routes).await
     }
 
     #[sqlx::test]

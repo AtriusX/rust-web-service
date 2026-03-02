@@ -1,12 +1,10 @@
-use crate::model::api_response::{ApiError, ApiResponse, AsApiResponse};
-use crate::model::auth::{JwtClaims, LoginDto};
-use crate::model::auth_error::AuthError;
-use crate::services::{AuthBody, AuthService};
+use crate::manager::{AuthManager, AuthTokenResponse};
+use crate::model::api_response::{ApiError, AsCookieApiResponse, CookieApiResponse};
+use crate::model::auth::LoginDto;
 use crate::state::AppState;
 use axum::extract::State;
-use axum::{Extension, Json};
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+use axum::Json;
+use axum_extra::extract::CookieJar;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
@@ -15,66 +13,57 @@ const AUTH_TAG: &str = "Authorization";
 pub fn get_routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(login))
-}
-
-pub fn get_protected_routes() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new()
-        .routes(routes!(get_info))
+        .routes(routes!(refresh))
+        .routes(routes!(logout))
 }
 
 #[utoipa::path(
     post,
-    path = "/login",
+    path = "/auth/login",
     responses(
-        (status = OK, description = "Log in the specified user", body = AuthBody),
+        (status = OK, description = "Log in the specified user", body = AuthTokenResponse),
         (status = "default", description = "General API Error", body = ApiError),
     ),
     tag = AUTH_TAG,
     security(),
 )]
 async fn login(
-    State(state): State<AuthService>,
+    jar: CookieJar,
+    State(state): State<AuthManager>,
     Json(payload): Json<LoginDto>,
-) -> ApiResponse<AuthBody> {
-    if payload.user_name.is_empty() || payload.password.is_empty() {
-        return Err(AuthError::MissingCredentials).as_api_response_ok();
-    }
-
-    if payload.user_name != "foo" || payload.password != "bar" {
-        return Err(AuthError::WrongCredentials).as_api_response_ok();
-    }
-
-    state
-        .generate_tokens(payload.user_name.as_str())
-        .as_api_response_ok()
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct GetUserInfo {
-    pub username: String,
-    pub email: String,
-    pub info: String,
+) -> CookieApiResponse<AuthTokenResponse> {
+    state.login(jar, payload).await.as_cookie_api_response_ok()
 }
 
 #[utoipa::path(
-    get,
-    path = "/get-user-info",
+    post,
+    path = "/auth/refresh",
     responses(
-        (status = OK, description = "Retrieve user info", body = GetUserInfo),
+        (status = OK, description = "Refresh the user's login", body = AuthTokenResponse),
+        (status = "default", description = "General API Error", body = ApiError),
+    ),
+    tag = AUTH_TAG,
+    security(),
+)]
+async fn refresh(
+    jar: CookieJar,
+    State(state): State<AuthManager>,
+) -> CookieApiResponse<AuthTokenResponse> {
+    state.refresh(jar).await.as_cookie_api_response_ok()
+}
+
+#[utoipa::path(
+    post,
+    path = "/auth/logout",
+    responses(
+        (status = OK, description = "Refresh the user's login", body = ()),
         (status = "default", description = "General API Error", body = ApiError),
     ),
     tag = AUTH_TAG,
 )]
-async fn get_info(
-    Extension(claims): Extension<JwtClaims>,
-) -> ApiResponse<GetUserInfo> {
-    let res = Ok::<_, AuthError>(
-        GetUserInfo {
-            username: claims.sub,
-            email: "foo@foo.com".to_string(),
-            info: "Hello there!".to_string(),
-        }
-    );
-
-    res.as_api_response_ok()
+async fn logout(
+    jar: CookieJar,
+    State(state): State<AuthManager>,
+) -> CookieApiResponse<()> {
+    state.logout(&jar).await.as_cookie_api_response_ok()
 }

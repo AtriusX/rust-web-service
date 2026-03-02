@@ -1,5 +1,7 @@
 pub mod authentication;
 pub mod openapi;
+pub mod storage_config;
+pub mod environment;
 
 use crate::config::openapi::OpenApiSpec;
 use crate::middleware::auth_layer;
@@ -7,7 +9,6 @@ use crate::state::AppState;
 use axum::http::Method;
 use axum::{middleware, Router};
 use log::debug;
-use sqlx::PgPool;
 use tower_http::cors::{AllowMethods, AllowOrigin, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing_subscriber::layer::SubscriberExt;
@@ -46,15 +47,14 @@ fn get_swagger(
     let api = OpenApiSpec::openapi()
         .merge_from(protected_api)
         .merge_from(public_api);
-    let swagger = SwaggerUi::new("/swagger-ui")
-        .url("/api.json", api)
-        .config(utoipa_swagger_ui::Config::default().persist_authorization(true));
 
-    swagger
+    SwaggerUi::new("/swagger-ui")
+        .url("/api.json", api)
+        .config(utoipa_swagger_ui::Config::default().persist_authorization(true))
 }
 
 pub async fn app(
-    pool: PgPool,
+    state: AppState,
     protected_routers: Vec<OpenApiRouter<AppState>>,
     public_routers: Vec<OpenApiRouter<AppState>>,
 ) -> Router {
@@ -68,7 +68,6 @@ pub async fn app(
         .fold(OpenApiRouter::new(), OpenApiRouter::merge)
         .split_for_parts();
     let swagger = get_swagger(protected_api, public_api);
-    let state = AppState::new(pool).await;
     let cors = get_cors();
 
     Router::new()

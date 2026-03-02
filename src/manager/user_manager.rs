@@ -32,13 +32,13 @@ pub enum UserError {
 impl ResponseError for UserError {
     fn to_api_err_response(&self) -> (StatusCode, ApiError) {
         match &self {
-            UserError::CannotCreateExistingUser(_) =>
+            Self::CannotCreateExistingUser(_) =>
                 self.as_api_error(StatusCode::BAD_REQUEST, "CannotCreateExistingUser"),
-            UserError::MissingId =>
+            Self::MissingId =>
                 self.as_api_error(StatusCode::BAD_REQUEST, "MissingId"),
-            UserError::NotFound(_) =>
+            Self::NotFound(_) =>
                 self.as_api_error(StatusCode::NOT_FOUND, "NotFound"),
-            UserError::FailedRequest(_) =>
+            Self::FailedRequest(_) =>
                 self.as_api_error(StatusCode::INTERNAL_SERVER_ERROR, "FailedRequest"),
         }
     }
@@ -96,7 +96,7 @@ impl UserManager {
             .find_by_id(id)
             .await
             .map(|u| u.as_dto())
-            .ok_or_else(|| UserError::NotFound(*id))
+            .ok_or(UserError::NotFound(*id))
     }
 
     pub async fn get_users(&self) -> Vec<UserDto> {

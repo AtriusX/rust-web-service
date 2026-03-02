@@ -1,6 +1,7 @@
 use crate::model::api_response::{ApiError, AsApiError, ResponseError};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use axum::Json;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use utoipa::ToSchema;
@@ -15,20 +16,24 @@ pub enum AuthError {
     TokenCreation,
     #[error("Invalid session token, please log back in.")]
     InvalidToken,
+    #[error("Failed to generate refresh token: {0}")]
+    RefreshTokenCreation(String),
 }
 
 impl ResponseError for AuthError {
 
     fn to_api_err_response(&self) -> (StatusCode, ApiError) {
         match self {
-            AuthError::WrongCredentials =>
+            Self::WrongCredentials =>
                 self.as_api_error(StatusCode::BAD_REQUEST, "WrongCredentials"),
-            AuthError::MissingCredentials =>
+            Self::MissingCredentials =>
                 self.as_api_error(StatusCode::BAD_REQUEST, "MissingCredentials"),
-            AuthError::InvalidToken =>
+            Self::InvalidToken =>
                 self.as_api_error(StatusCode::UNAUTHORIZED, "InvalidToken"),
-            AuthError::TokenCreation =>
-                self.as_api_error(StatusCode::UNAUTHORIZED, "InvalidToken"),
+            Self::TokenCreation =>
+                self.as_api_error(StatusCode::INTERNAL_SERVER_ERROR, "TokenCreation"),
+            Self::RefreshTokenCreation(_) =>
+                self.as_api_error(StatusCode::INTERNAL_SERVER_ERROR, "RefreshTokenCreation"),
         }
     }
 }
@@ -36,6 +41,7 @@ impl ResponseError for AuthError {
 impl IntoResponse for AuthError {
 
     fn into_response(self) -> Response {
-        self.to_api_err_response().into_response()
+        let (code, err) = self.to_api_err_response();
+        (code, Json(err)).into_response()
     }
 }
